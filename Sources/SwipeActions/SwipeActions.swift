@@ -21,7 +21,7 @@ public enum SwipeState: Equatable {
     case swiped(UUID)
 }
 
-struct SwipeAction<V1: View, V2: View>: ViewModifier {
+public struct SwipeAction<V1: View, V2: View>: ViewModifier {
 
     enum VisibleButton {
         case none
@@ -33,7 +33,8 @@ struct SwipeAction<V1: View, V2: View>: ViewModifier {
     @State private var offset: CGFloat = 0
     @State private var oldOffset: CGFloat = 0
     @State private var visibleButton: VisibleButton = .none
-    
+    @State private var triggerFullSwipe: Bool = false
+
     /**
      To detect if drag gesture is ended because of known issue that drag gesture onEnded not called:
      https://stackoverflow.com/questions/58807357/detect-draggesture-cancelation-in-swiftui
@@ -61,7 +62,7 @@ struct SwipeAction<V1: View, V2: View>: ViewModifier {
     private let action: (() -> Void)?
     private let id: UUID = UUID()
     
-    init(menu: MenuType,
+    public init(menu: MenuType,
          allowsFullSwipe: Bool = false,
          fullSwipeRole: SwipeRole = .defaults,
          swipeColor: Color? = nil,
@@ -116,6 +117,7 @@ struct SwipeAction<V1: View, V2: View>: ViewModifier {
         visibleButton = .none
         offset = 0
         oldOffset = 0
+        triggerFullSwipe = false
     }
     
     var leadingView: some View {
@@ -157,7 +159,7 @@ struct SwipeAction<V1: View, V2: View>: ViewModifier {
             leadingView
             Spacer()
             trailingView
-                .offset(x: allowsFullSwipe && offset < minTrailingOffset ? (-1 * minTrailingOffset) + offset : 0)
+                .offset(x: triggerFullSwipe ? (-1 * minTrailingOffset) + offset : 0)
         }
     }
     
@@ -167,7 +169,10 @@ struct SwipeAction<V1: View, V2: View>: ViewModifier {
                 .offset(x: (-1 * maxLeadingOffset) + offset)
             Spacer()
             trailingView
-                .offset(x: (-1 * minTrailingOffset) + offset)
+                .offset(x: triggerFullSwipe
+                        ? (-1 * minTrailingOffset) + offset
+                        : max(0, (-1 * minTrailingOffset) + offset)
+                )
         }
     }
     
@@ -180,7 +185,7 @@ struct SwipeAction<V1: View, V2: View>: ViewModifier {
             .measureSize {
                 contentWidth = $0.width
             }
-            .gesture(
+            .highPriorityGesture(
                 DragGesture(minimumDistance: 15, coordinateSpace: .local)
                     .updating($dragGestureActive) { value, state, transaction in
                         state = true
@@ -197,8 +202,15 @@ struct SwipeAction<V1: View, V2: View>: ViewModifier {
                                 offset = totalSlide
                             }
                         }
+
+                        let _triggerFullSwipe = allowsFullSwipe && totalSlide < -(contentWidth * 0.7)
+                        if _triggerFullSwipe != triggerFullSwipe {
+                            withAnimation(.snappy) {
+                                triggerFullSwipe = _triggerFullSwipe
+                            }
+                        }
                     }.onEnded { value in
-                        withAnimation {
+                        withAnimation(.spring) {
                             if visibleButton == .left,
                                value.translation.width < -20 { ///user dismisses left buttons
                                 reset()
@@ -272,23 +284,30 @@ struct SwipeAction<V1: View, V2: View>: ViewModifier {
         case .slided:
             ZStack {
                 swipeColor
+                    .offset(x: contentWidth + offset)
                     .zIndex(1)
                 slidedMenu
                     .zIndex(2)
                 gesturedContent(content: content)
                     .zIndex(3)
             }
+            .animation(nil, value: contentWidth)
             .frame(height: isDeletedRow ? 0 : nil, alignment: .top)
+            .compositingGroup()
         case .swiped:
             ZStack {
                 swipeColor
+                    .offset(x: contentWidth + offset)
+                    .animation(nil, value: contentWidth)
                     .zIndex(1)
                 swipedMenu
                     .zIndex(2)
                 gesturedContent(content: content)
                     .zIndex(3)
             }
+           .animation(nil, value: contentWidth)
            .frame(height: isDeletedRow ? 0 : nil, alignment: .top)
+           .compositingGroup()
         }
     }
 }

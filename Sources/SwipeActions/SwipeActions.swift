@@ -194,11 +194,11 @@ public struct SwipeAction<V1: View, V2: View>: ViewModifier {
                         let totalSlide = value.translation.width + oldOffset
                         
                         if allowsFullSwipe && ...0 ~= Int(totalSlide) {
-                            withAnimation {
+                            withAnimation(.interactiveSpring) {
                                 offset = totalSlide
                             }
                         } else if (0 ... Int(maxLeadingOffset) ~= Int(totalSlide)) || (Int(minTrailingOffset) ... 0 ~= Int(totalSlide)) {
-                            withAnimation {
+                            withAnimation(.interactiveSpring) {
                                 offset = totalSlide
                             }
                         }

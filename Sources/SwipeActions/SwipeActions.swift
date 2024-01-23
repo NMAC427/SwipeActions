@@ -277,6 +277,13 @@ public struct SwipeAction<V1: View, V2: View>: ViewModifier {
                     break
                 }
             }
+            .modify {
+                if #available(iOS 17.0, macOS 14.0, tvOS 17.0, watchOS 10.0, *) {
+                    $0.sensoryFeedback(.impact, trigger: triggerFullSwipe)
+                } else {
+                    $0
+                }
+            }
     }
     
     public func body(content: Content) -> some View {

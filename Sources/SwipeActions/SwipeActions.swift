@@ -186,7 +186,7 @@ public struct SwipeAction<V1: View, V2: View>: ViewModifier {
                 contentWidth = $0.width
             }
             .highPriorityGesture(
-                DragGesture(minimumDistance: 15, coordinateSpace: .local)
+                DragGesture(minimumDistance: 32, coordinateSpace: .local)
                     .updating($dragGestureActive) { value, state, transaction in
                         state = true
                     }
